@@ -12,18 +12,21 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // Middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://loankart-app.vercel.app",
-    ],
-    credentials: true,
-  })
-);
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://loankart-app.vercel.app",
+];
 
-
-app.options(/.*/, cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); 
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS not allowed"));
+  },
+  credentials: true,
+}));
 
 
 app.use(express.json());
@@ -70,12 +73,14 @@ app.use("/api/admin", adminRoutes);
 // Database connection
 try {
   mongoose
-    .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/loanapp")
-    .then(() => console.log("Connected to MongoDB"))
-    .catch((err) => {
-      console.error("MongoDB connection error:", err);
-      process.exit(1);
-    });
+  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/loanapp", {
+    serverSelectionTimeoutMS: 30000, // wait up to 30s for Atlas (important for Render)
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
 } catch (error) {
   console.error("Database setup error:", error);
   process.exit(1);
